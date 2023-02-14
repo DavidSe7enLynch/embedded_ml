@@ -2,6 +2,8 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 
+MODEL_TF = 'model'
+
 
 def define_model():
     # Define the model architecture
@@ -14,9 +16,9 @@ def define_model():
     return model
 
 
-def load_model():
+def load_model(model_path="quantized_model.tflite"):
     # Load the quantized TFLite model
-    interpreter = tf.lite.Interpreter(model_path="quantized_model.tflite")
+    interpreter = tf.lite.Interpreter(model_path)
     interpreter.allocate_tensors()
 
     # Get input and output tensors
@@ -55,41 +57,46 @@ class XorModel:
         self.y = [0, 1, 1, 0]
 
     def train(self):
-        self.model.fit(self.X, self.y, epochs=1000, batch_size=4)
+        self.model.fit(self.X, self.y, epochs=500, batch_size=4)
 
     def store(self):
-        self.model.save('original_model.tflite')
+        self.model.save(MODEL_TF)
+        converter = tf.lite.TFLiteConverter.from_saved_model(MODEL_TF)
+        model_no_quant_tflite = converter.convert()
+
+        open('original_model.tflite', "wb").write(model_no_quant_tflite)
 
     def quantize_store(self):
         converter = tf.lite.TFLiteConverter.from_keras_model(self.model)
 
-        # Set the optimization flag to "optimization_type.DEFAULT"
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
-
-        # Set the input and output data types to int8
         converter.target_spec.supported_types = [tf.int8]
-
         converter.representative_dataset = self.representative_dataset
-
-        # Convert the model to a TFLite flatbuffer file
         tflite_model = converter.convert()
 
-        # Save the TFLite model to a file
+        # converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        # converter.representative_dataset = self.representative_dataset
+        # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+        # converter.inference_input_type = tf.int8  # or tf.uint8
+        # converter.inference_output_type = tf.int8  # or tf.uint8
+        # tflite_model = converter.convert()
+
         with open('quantized_model.tflite', 'wb') as f:
             f.write(tflite_model)
 
-    # Provide a representative dataset for the quantization process
     def representative_dataset(self):
         for i in range(len(self.X)):
             yield [tf.constant(self.X[i], shape=(1, 2), dtype=tf.float32)]
 
 
 if __name__ == '__main__':
-    # xor_model = XorModel()
-    # xor_model.model = define_model()
-    # xor_model.train()
-    # xor_model.quantize_store()
+    xor_model = XorModel()
+    xor_model.model = define_model()
+    xor_model.train()
+    xor_model.quantize_store()
+    xor_model.store()
     load_model()
+    load_model("original_model.tflite")
 
 
 
