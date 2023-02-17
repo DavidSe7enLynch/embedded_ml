@@ -75,10 +75,10 @@ class XorModel:
         tflite_model = converter.convert()
 
         # converter.optimizations = [tf.lite.Optimize.DEFAULT]
-        # converter.representative_dataset = self.representative_dataset
         # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-        # converter.inference_input_type = tf.int8  # or tf.uint8
-        # converter.inference_output_type = tf.int8  # or tf.uint8
+        # converter.inference_input_type = tf.int8
+        # converter.inference_output_type = tf.int8
+        # converter.representative_dataset = self.representative_dataset
         # tflite_model = converter.convert()
 
         with open('quantized_model.tflite', 'wb') as f:
@@ -99,6 +99,7 @@ if __name__ == '__main__':
     load_model("original_model.tflite")
 
 
-
-
-
+# # Convert the model to the TensorFlow Lite format with quantization
+# def representative_dataset():
+#     for i in range(500):
+#         yield ([x_train[i].reshape(1, 1)])
