@@ -4,14 +4,12 @@ import numpy as np
 import os
 import subprocess
 
-MODEL_TF = 'model'
-
 
 class XorModel:
     def __init__(self):
         self.model = self.define_model()
-        self.X = [[0, 0], [0, 1], [1, 0], [1, 1]]
-        self.y = [0, 1, 1, 0]
+        self.X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+        self.y = np.array([0, 1, 1, 0])
 
     @staticmethod
     def define_model():
@@ -56,22 +54,18 @@ class XorModel:
 
     def train(self):
         self.model.fit(self.X, self.y, epochs=500, batch_size=4)
+        self.model.save('model')
 
     def store(self):
-        self.model.save(MODEL_TF)
-        converter = tf.lite.TFLiteConverter.from_saved_model(MODEL_TF)
+        converter = tf.lite.TFLiteConverter.from_keras_model(self.model)
         model_no_quant_tflite = converter.convert()
 
-        open('original_model.tflite', "wb").write(model_no_quant_tflite)
-        subprocess.run(['xxd', '-i', 'original_model.tflite'], stdout=open('original_model.cc', 'w'))
+        with open('original_model.tflite', "wb") as f:
+            f.write(model_no_quant_tflite)
+            subprocess.run(['xxd', '-i', 'original_model.tflite'], stdout=open('original_model.cc', 'w'))
 
     def quantize_store(self):
         converter = tf.lite.TFLiteConverter.from_keras_model(self.model)
-
-        # converter.optimizations = [tf.lite.Optimize.DEFAULT]
-        # converter.target_spec.supported_types = [tf.int8]
-        # converter.representative_dataset = self.representative_dataset
-        # tflite_model = converter.convert()
 
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
         converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
@@ -80,18 +74,13 @@ class XorModel:
         converter.representative_dataset = self.representative_dataset
         tflite_model = converter.convert()
 
-        # converter.optimizations = [tf.lite.Optimize.DEFAULT]
-        # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-        # converter.representative_dataset = self.representative_dataset
-        # tflite_model = converter.convert()
-
         with open('quantized_model.tflite', 'wb') as f:
             f.write(tflite_model)
             subprocess.run(['xxd', '-i', 'quantized_model.tflite'], stdout=open('quantized_model.cc', 'w'))
 
     def representative_dataset(self):
         for i in range(len(self.X)):
-            yield [np.array(self.X[i], dtype=np.float32, ndmin=2)]
+            yield [self.X[i].astype('float32')]
             # yield [np.array(self.X[i]).astype('float32')]
 
 
