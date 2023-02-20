@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 import os
+import subprocess
 
 MODEL_TF = 'model'
 
@@ -64,6 +65,7 @@ class XorModel:
         model_no_quant_tflite = converter.convert()
 
         open('original_model.tflite', "wb").write(model_no_quant_tflite)
+        subprocess.run(['xxd', '-i', 'original_model.tflite'], stdout=open('original_model.cc', 'w'))
 
     def quantize_store(self):
         converter = tf.lite.TFLiteConverter.from_keras_model(self.model)
@@ -87,6 +89,7 @@ class XorModel:
 
         with open('quantized_model.tflite', 'wb') as f:
             f.write(tflite_model)
+            subprocess.run(['xxd', '-i', 'quantized_model.tflite'], stdout=open('quantized_model.cc', 'w'))
 
     def representative_dataset(self):
         for i in range(len(self.X)):
