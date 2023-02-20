@@ -18,37 +18,33 @@ def define_model():
 
 
 def load_model(model_path="quantized_model.tflite"):
-    # Load the quantized TFLite model
     interpreter = tf.lite.Interpreter(model_path)
     interpreter.allocate_tensors()
 
-    # Get input and output tensors
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
 
-    # Define the input and expected output data
-    input_data = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=np.float32)
-    expected_output = np.array([0, 1, 1, 0], dtype=np.float32)
+    if model_path == "quantized_model.tflite":
+        input_data = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=np.int8)
+        expected_output = np.array([0, 1, 1, 0], dtype=np.int8)
+    else:
+        input_data = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=np.float32)
+        expected_output = np.array([0, 1, 1, 0], dtype=np.float32)
 
-    # Run inference on the input data and compare the output to the expected output
     num_correct = 0
     for i in range(len(input_data)):
-        # Set the input tensor data
         interpreter.set_tensor(input_details[0]['index'], input_data[i:i + 1])
 
-        # Run the model and get the output tensor data
         interpreter.invoke()
         output_data = interpreter.get_tensor(output_details[0]['index'])
 
-        # Compare the output to the expected output
         expected = expected_output[i]
         actual = output_data[0]
         if expected == (actual > 0.5):
             num_correct += 1
 
-    # Calculate the accuracy
     accuracy = num_correct / len(input_data)
-    print("Accuracy: ", accuracy)
+    print(f"{model_path} Accuracy: {accuracy}")
 
 
 def check_size():
@@ -88,17 +84,18 @@ class XorModel:
         converter.representative_dataset = self.representative_dataset
         tflite_model = converter.convert()
 
-        converter.optimizations = [tf.lite.Optimize.DEFAULT]
-        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-        converter.representative_dataset = self.representative_dataset
-        tflite_model = converter.convert()
+        # converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+        # converter.representative_dataset = self.representative_dataset
+        # tflite_model = converter.convert()
 
         with open('quantized_model.tflite', 'wb') as f:
             f.write(tflite_model)
 
     def representative_dataset(self):
         for i in range(len(self.X)):
-            yield [np.array(self.X[i]).astype('float32')]
+            yield [np.array(self.X[i], dtype=np.float32, ndmin=2)]
+            # yield [np.array(self.X[i]).astype('float32')]
 
 
 if __name__ == '__main__':
