@@ -97,7 +97,6 @@ class XorModel:
 
 if __name__ == '__main__':
     xor_model = XorModel()
-    xor_model.model = xor_model.define_model()
     xor_model.train()
     xor_model.quantize_store()
     xor_model.store()
