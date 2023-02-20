@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
+import os
 
 MODEL_TF = 'model'
 
@@ -50,6 +51,12 @@ def load_model(model_path="quantized_model.tflite"):
     print("Accuracy: ", accuracy)
 
 
+def check_size():
+    size_unquantized = os.path.getsize('original_model.tflite')
+    size_quantized = os.path.getsize('quantized_model.tflite')
+    print(f"quantized model size: {size_quantized}, unquantized model size: {size_unquantized}")
+
+
 class XorModel:
     def __init__(self):
         self.model = define_model()
@@ -69,24 +76,29 @@ class XorModel:
     def quantize_store(self):
         converter = tf.lite.TFLiteConverter.from_keras_model(self.model)
 
+        # converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        # converter.target_spec.supported_types = [tf.int8]
+        # converter.representative_dataset = self.representative_dataset
+        # tflite_model = converter.convert()
+
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
-        converter.target_spec.supported_types = [tf.int8]
+        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+        converter.inference_input_type = tf.int8
+        converter.inference_output_type = tf.int8
         converter.representative_dataset = self.representative_dataset
         tflite_model = converter.convert()
 
-        # converter.optimizations = [tf.lite.Optimize.DEFAULT]
-        # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-        # converter.inference_input_type = tf.int8
-        # converter.inference_output_type = tf.int8
-        # converter.representative_dataset = self.representative_dataset
-        # tflite_model = converter.convert()
+        converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+        converter.representative_dataset = self.representative_dataset
+        tflite_model = converter.convert()
 
         with open('quantized_model.tflite', 'wb') as f:
             f.write(tflite_model)
 
     def representative_dataset(self):
         for i in range(len(self.X)):
-            yield [tf.constant(self.X[i], shape=(1, 2), dtype=tf.float32)]
+            yield [np.array(self.X[i]).astype('float32')]
 
 
 if __name__ == '__main__':
@@ -95,11 +107,7 @@ if __name__ == '__main__':
     xor_model.train()
     xor_model.quantize_store()
     xor_model.store()
+    check_size()
     load_model()
     load_model("original_model.tflite")
 
-
-# # Convert the model to the TensorFlow Lite format with quantization
-# def representative_dataset():
-#     for i in range(500):
-#         yield ([x_train[i].reshape(1, 1)])
