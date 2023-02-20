@@ -24,12 +24,8 @@ def load_model(model_path="quantized_model.tflite"):
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
 
-    if model_path == "quantized_model.tflite":
-        input_data = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=np.int8)
-        expected_output = np.array([0, 1, 1, 0], dtype=np.int8)
-    else:
-        input_data = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=np.float32)
-        expected_output = np.array([0, 1, 1, 0], dtype=np.float32)
+    input_data = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=input_details[0]['dtype'])
+    expected_output = np.array([0, 1, 1, 0], dtype=output_details[0]['dtype'])
 
     num_correct = 0
     for i in range(len(input_data)):
