@@ -29,7 +29,6 @@ class XorModel:
         output_scale, output_zero_point = output_details["quantization"]
 
         input_data = self.X.copy().astype(input_details["dtype"])
-        expected_output = self.y
         if (input_scale, input_zero_point) != (0.0, 0):
             input_data = self.X / input_scale + input_zero_point
             input_data = input_data.astype(input_details["dtype"])
@@ -42,10 +41,9 @@ class XorModel:
             output_data = interpreter.get_tensor(output_details['index'])[0]
             actual = output_data
             if (output_scale, output_zero_point) != (0.0, 0):
-                quantized_output = (output_data - output_zero_point) * output_scale
-                actual = quantized_output
+                actual = output_scale * (int(output_data) - int(output_zero_point))
 
-            expected = expected_output[i]
+            expected = self.y[i]
             if expected == (actual > 0.5):
                 num_correct += 1
 
