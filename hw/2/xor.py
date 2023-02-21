@@ -19,26 +19,33 @@ class XorModel:
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         return model
 
-    @staticmethod
-    def load_model(model_path="quantized_model.tflite"):
+    def load_model(self, model_path="quantized_model.tflite"):
         interpreter = tf.lite.Interpreter(model_path)
         interpreter.allocate_tensors()
 
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
+        input_details = interpreter.get_input_details()[0]
+        output_details = interpreter.get_output_details()[0]
+        input_scale, input_zero_point = input_details["quantization"]
+        output_scale, output_zero_point = output_details["quantization"]
 
-        input_data = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=input_details[0]['dtype'])
-        expected_output = np.array([0, 1, 1, 0], dtype=output_details[0]['dtype'])
+        input_data = self.X.copy().astype(input_details["dtype"])
+        expected_output = self.y
+        if (input_scale, input_zero_point) != (0.0, 0):
+            input_data = self.X / input_scale + input_zero_point
+            input_data = input_data.astype(input_details["dtype"])
 
         num_correct = 0
         for i in range(len(input_data)):
-            interpreter.set_tensor(input_details[0]['index'], input_data[i:i + 1])
-
+            interpreter.set_tensor(input_details['index'], input_data[i:i + 1])
             interpreter.invoke()
-            output_data = interpreter.get_tensor(output_details[0]['index'])
+
+            output_data = interpreter.get_tensor(output_details['index'])[0]
+            actual = output_data
+            if (output_scale, output_zero_point) != (0.0, 0):
+                quantized_output = (output_data - output_zero_point) * output_scale
+                actual = quantized_output
 
             expected = expected_output[i]
-            actual = output_data[0]
             if expected == (actual > 0.5):
                 num_correct += 1
 
