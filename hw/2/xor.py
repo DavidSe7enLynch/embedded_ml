@@ -83,7 +83,6 @@ class XorModel:
     def representative_dataset(self):
         for i in range(len(self.X)):
             yield [self.X[i].astype('float32')]
-            # yield [np.array(self.X[i]).astype('float32')]
 
 
 if __name__ == '__main__':
